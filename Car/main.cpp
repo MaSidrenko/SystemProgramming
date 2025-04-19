@@ -1,4 +1,4 @@
-#include<iostream>
+ï»¿#include<iostream>
 
 #define MIN_TANK_CAPACITY		 20
 #define MAX_TANK_CAPACITY		120
@@ -64,7 +64,7 @@ void main()
 	Tank tank(80);
 	do
 	{
-		std::cout << "Íà ñêîëüêî çàïðàâëÿåìñÿ?: "; std::cin >> fuell;
+		std::cout << "ÐÐ° ÑÐºÐ¾Ð»ÑŒÐºÐ¾ Ð·Ð°Ð¿Ñ€Ð°Ð²Ð»ÑÐµÐ¼ÑÑ?: "; std::cin >> fuell;
 		tank.fill(fuell);
 		tank.info();
 	} while (true);

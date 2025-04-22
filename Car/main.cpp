@@ -23,7 +23,7 @@ public:
 	),
 		fuel_level(0)
 	{
-		std::cout << "Tank:" << this << std::endl;
+		std::cout << "Tank: " << this << std::endl;
 		if (capacity < MIN_TANK_CAPACITY)std::cout << "Min capacity was applied" << std::endl;
 		if (capacity > MAX_TANK_CAPACITY)std::cout << "Max capacity was applied" << std::endl;
 		std::cout << "Tank is ready" << std::endl;
@@ -77,13 +77,12 @@ public:
 		{
 			task.wait();
 		}
-		std::cout << "Engine:" << this << " is over" << std::endl;
+		std::cout << "Engine: " << this << " is over" << std::endl;
 
 	}
 	void EngineStart()
 	{
 		isRunning = true;
-		//std::thread(&Engine::Consume, this).detach();
 		task = std::async(std::launch::async, &Engine::Consume, this, 0.0003);
 	}
 	void EngineStop()
@@ -97,11 +96,11 @@ public:
 			double fuel_now = fuel_tank.give_fuel(CONSUME_FUEL);
 			if (fuel_now <= 0)
 			{
-				std::cout << "Топлива нет. Мы встали!" << std::endl;
+				std::cout << std::endl << "Топлива нет. Мы встали!" << std::endl;
 				isRunning = false;
 				break;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}
 	}
 };
@@ -163,7 +162,7 @@ void main()
 				CarRun = true;
 				while (CarRun)
 				{
-					//std::cout << 
+					system("CLS");
 					car.CarInfo();
 
 					if (tank.get_fuel_level() <= 0)

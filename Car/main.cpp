@@ -1,6 +1,11 @@
 ﻿#include<iostream>
 #include<thread>
 #include<future>
+#include<conio.h>
+#include<Windows.h>
+
+#define Escape					 27
+#define Enter					 13
 
 #define MIN_TANK_CAPACITY		 20
 #define MAX_TANK_CAPACITY		120
@@ -80,7 +85,8 @@ public:
 			consumption
 		),
 		DEFAULT_CONSUMPTION_PER_SECOND(CONSUMPTION * 3e-5),
-		consumption_per_second(DEFAULT_CONSUMPTION_PER_SECOND)
+		consumption_per_second(DEFAULT_CONSUMPTION_PER_SECOND),
+		is_started(false)
 	{
 		std::cout << "Engine: " << this << " is ready" << std::endl;
 	}
@@ -108,13 +114,29 @@ public:
 	}
 };
 
+#define MAX_SPEED_LOWER_LIMIT		130
+#define MAX_SPEED_HIGHER_LIMIT		410
+
 class Car
 {
 private:
-	Tank& fuel_tank;
-	Engine& engine;
+	Tank fuel_tank;
+	Engine engine;
+	const int MAX_SPEED;
+	int speed;
+	bool driver_inside;
 public:
-	Car(Tank& fuel_tank, Engine& engine) : fuel_tank(fuel_tank), engine(engine)
+	Car(double consumption, int capacity, int max_speed = 250) :
+		MAX_SPEED
+		(
+			max_speed < MAX_SPEED_LOWER_LIMIT ? MAX_SPEED_LOWER_LIMIT :
+			max_speed > MAX_SPEED_HIGHER_LIMIT ? MAX_SPEED_HIGHER_LIMIT :
+			max_speed
+		),
+		engine(consumption),
+		fuel_tank(capacity),
+		speed(0),
+		driver_inside(false)
 	{
 		std::cout << "Car: " << this << std::endl;
 		std::cout << "Car is ready!" << std::endl;
@@ -131,9 +153,46 @@ public:
 	{
 		engine.stop();
 	}
-	void CarInfo()
+	void get_in()
+	{
+		driver_inside = true;
+		panel();
+	}
+	void get_out()
+	{
+		driver_inside = false;
+	}
+	void control()
+	{
+		char key = 0;
+		do
+		{
+			key = _getch();
+			switch (key)
+			{
+				case Enter:
+					driver_inside ? get_out() : get_in();
+					break;
+			}
+		} while (key != Escape);
+	}
+	void panel()
+	{
+		while(driver_inside)
+		{
+			system("CLS");
+			std::cout << "Fuel level: " << fuel_tank.get_fuel_level() << " listers" << std::endl;
+			std::cout << "Enigine is " << (engine.started() ? "started" : "stoped") << std::endl;
+			std::cout << "Speed: " << speed << " km/h\n";
+			Sleep(100);
+		}
+	}
+	void CarInfo()const
 	{
 		fuel_tank.info();
+		engine.info();
+		std::cout << "Speed now: " << speed << " km/h" << std::endl;
+		std::cout << "Max speed: " << MAX_SPEED << " km/h" << std::endl;
 	}
 };
 
@@ -144,9 +203,9 @@ public:
 void main()
 {
 	setlocale(LC_ALL, "");
+#ifdef TANK_CHEK
 	double fuell;
 	Tank tank(80);
-#ifdef TANK_CHEK
 	do
 	{
 		std::cout << "На сколько заправляемся?: "; std::cin >> fuell;
@@ -160,6 +219,8 @@ void main()
 	Engine engine(10);
 	engine.info();
 #endif // ENGINE_CHEK
-
+	Car bmw(10, 80, 270);
+	//bmw.CarInfo();
+	bmw.control();
 
 }

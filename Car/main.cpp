@@ -58,50 +58,53 @@ public:
 	}
 };
 
+#define MIN_ENGINE_CONSUMPTION		 3
+#define MAX_ENGINE_CONSUMPTION		25
 class Engine
 {
 private:
-	bool isRunning;
-	Tank& fuel_tank;
-	std::future<void> task;
+	const double CONSUMPTION;
+	const double DEFAULT_CONSUMPTION_PER_SECOND;
+	double consumption_per_second;
+	bool is_started;
 public:
-	Engine(Tank& fuel_tank) : fuel_tank(fuel_tank), isRunning(false)
+	double get_consumption_per_second()const
 	{
-		std::cout << "Engine: " << this << std::endl;
-		std::cout << "Engine is ready!" << std::endl;
+		return consumption_per_second;
+	}
+	Engine(double consumption) :
+		CONSUMPTION
+		(
+			consumption < MIN_ENGINE_CONSUMPTION ? MIN_ENGINE_CONSUMPTION :
+			consumption > MAX_ENGINE_CONSUMPTION ? MAX_ENGINE_CONSUMPTION :
+			consumption
+		),
+		DEFAULT_CONSUMPTION_PER_SECOND(CONSUMPTION * 3e-5),
+		consumption_per_second(DEFAULT_CONSUMPTION_PER_SECOND)
+	{
+		std::cout << "Engine: " << this << " is ready" << std::endl;
 	}
 	~Engine()
 	{
-		EngineStop();
-		if (task.valid())
-		{
-			task.wait();
-		}
 		std::cout << "Engine: " << this << " is over" << std::endl;
-
 	}
-	void EngineStart()
+	void start()
 	{
-		isRunning = true;
-		task = std::async(std::launch::async, &Engine::Consume, this, 0.0003);
+		is_started = true;
 	}
-	void EngineStop()
+	void stop()
 	{
-		isRunning = false;
+		is_started = false;
 	}
-	void Consume(const double CONSUME_FUEL = 0.0003)
+	bool started()const
 	{
-		while (isRunning)
-		{
-			double fuel_now = fuel_tank.give_fuel(CONSUME_FUEL);
-			if (fuel_now <= 0)
-			{
-				std::cout << std::endl << "Топлива нет. Мы встали!" << std::endl;
-				isRunning = false;
-				break;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		}
+		return is_started;
+	}
+	void info()const
+	{
+		std::cout << "Consumption: " << CONSUMPTION << " liters/100km\n";
+		std::cout << "Default Consumption: " << DEFAULT_CONSUMPTION_PER_SECOND << " liters/s\n";
+		std::cout << "Consumption: " << consumption_per_second << " listers/s\n";
 	}
 };
 
@@ -122,11 +125,11 @@ public:
 	}
 	void CarRun()
 	{
-		engine.EngineStart();
+		engine.start();
 	}
 	void CarStop()
 	{
-		engine.EngineStop();
+		engine.stop();
 	}
 	void CarInfo()
 	{
@@ -135,55 +138,28 @@ public:
 };
 
 
-
+//#define TANK_CHEK
+//#define ENGINE_CHEK
 
 void main()
 {
 	setlocale(LC_ALL, "");
 	double fuell;
-	char isRun;
-	bool CarRun;
 	Tank tank(80);
-	Engine engine(tank);
-	Car car(tank, engine);
+#ifdef TANK_CHEK
 	do
 	{
 		std::cout << "На сколько заправляемся?: "; std::cin >> fuell;
 		std::cout << std::endl;
 		tank.fill(fuell);
 		tank.info();
-		std::cout << "Заводим машину Y/N?: "; std::cin >> isRun;
-		std::cout << std::endl;
-		if (isRun == 'Y')
-		{
-			if (fuell > 0)
-			{
-				car.CarRun();
-				CarRun = true;
-				while (CarRun)
-				{
-					system("CLS");
-					car.CarInfo();
 
-					if (tank.get_fuel_level() <= 0)
-					{
-						CarRun = false;
-					}
-				}
-			}
-			else
-			{
-				std::cout << "Не хватет топлива" << std::endl;
-				car.CarStop();
-			}
-		}
-		else if (isRun == 'N')
-		{
-			car.CarStop();
-		}
-		else
-		{
-			std::cout << "Unknown symbol" << std::endl;
-		}
 	} while (true);
+#endif // TANK_CHEK
+#ifdef ENGINE_CHEK
+	Engine engine(10);
+	engine.info();
+#endif // ENGINE_CHEK
+
+
 }

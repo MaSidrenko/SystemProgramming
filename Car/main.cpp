@@ -1,6 +1,11 @@
 ﻿#include<iostream>
 #include<thread>
 #include<future>
+#include<conio.h>
+#include<Windows.h>
+
+#define Escape					 27
+#define Enter					 13
 
 #define MIN_TANK_CAPACITY		 20
 #define MAX_TANK_CAPACITY		120
@@ -58,14 +63,33 @@ public:
 	}
 };
 
+#define MIN_ENGINE_CONSUMPTION			 3
+#define MAX_ENGINE_CONSUMPTION			25
+
 class Engine
 {
 private:
 	bool isRunning;
-	Tank& fuel_tank;
+	//Tank& fuel_tank;
+	const double CONSUMPITON;
+	const double DEFAULT_CONSUMPITON_PER_SECOND;
+	double consumpiton_per_second;
 	std::future<void> task;
 public:
-	Engine(Tank& fuel_tank) : fuel_tank(fuel_tank), isRunning(false)
+	double get_consumption_per_second()const
+	{
+		return consumpiton_per_second;
+	}
+	Engine(double consumption) :
+		CONSUMPITON
+		(
+			consumption < MIN_ENGINE_CONSUMPTION ? MIN_ENGINE_CONSUMPTION :
+			consumption > MAX_ENGINE_CONSUMPTION ? MAX_ENGINE_CONSUMPTION :
+			consumption
+		),
+		DEFAULT_CONSUMPITON_PER_SECOND(CONSUMPITON * 3e-5),
+		consumpiton_per_second(DEFAULT_CONSUMPITON_PER_SECOND),
+		isRunning(false)
 	{
 		std::cout << "Engine: " << this << std::endl;
 		std::cout << "Engine is ready!" << std::endl;
@@ -83,38 +107,65 @@ public:
 	void EngineStart()
 	{
 		isRunning = true;
-		task = std::async(std::launch::async, &Engine::Consume, this, 0.0003);
+		task = std::async(std::launch::async, &Engine::Consume, this);
 	}
 	void EngineStop()
 	{
 		isRunning = false;
 	}
-	void Consume(const double CONSUME_FUEL = 0.0003)
+	bool isStarted()
+	{
+		return isRunning;
+	}
+	void Consume(/*double CONSUME_FUEL = consumpiton_per_second*/)
 	{
 		while (isRunning)
 		{
-			double fuel_now = fuel_tank.give_fuel(CONSUME_FUEL);
+			double fuel_now = consumpiton_per_second;
 			if (fuel_now <= 0)
 			{
 				std::cout << std::endl << "Топлива нет. Мы встали!" << std::endl;
-				isRunning = false;
+				//isRunning = false;
+				EngineStop();
 				break;
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}
 	}
+	void EngineInfo()const
+	{
+		std::cout << "Consumption: " << CONSUMPITON << " liters/100km\n";
+		std::cout << "Default Consumption: " << DEFAULT_CONSUMPITON_PER_SECOND << " liters/s\n";
+		std::cout << "Consumption: " << consumpiton_per_second << " listers/s\n";
+	}
 };
+
+#define MAX_SPEED_LOWER_LIMIT		130
+#define MAX_SPEED_HIGHER_LIMIT		410
 
 class Car
 {
 private:
-	Tank& fuel_tank;
-	Engine& engine;
+	Tank fuel_tank;
+	Engine engine;
+	const int MAX_SPEED;
+	int speed;
+	bool driver_inside;
 public:
-	Car(Tank& fuel_tank, Engine& engine) : fuel_tank(fuel_tank), engine(engine)
+	Car(double consumption, int capacity, int max_speed = 250) :
+		MAX_SPEED
+		(
+			max_speed < MAX_SPEED_LOWER_LIMIT ? MAX_SPEED_LOWER_LIMIT :
+			max_speed > MAX_SPEED_HIGHER_LIMIT ? MAX_SPEED_HIGHER_LIMIT :
+			max_speed
+		),
+		engine(consumption),
+		fuel_tank(capacity),
+		speed(0),
+		driver_inside(false)
 	{
 		std::cout << "Car: " << this << std::endl;
-		std::cout << "Car is ready!" << std::endl;
+		std::cout << "Car is ready! Press 'Enter' to enter her" << std::endl;
 	}
 	~Car()
 	{
@@ -128,9 +179,57 @@ public:
 	{
 		engine.EngineStop();
 	}
+	void get_in()
+	{
+		driver_inside = true;
+		panel();
+	}
+	void get_out()
+	{
+		driver_inside = false;
+	}
+	void control()
+	{
+		char key = 0;
+		do
+		{
+			key = _getch();
+			switch (key)
+			{
+			case Enter:
+			{
+				std::cout << "Вы внутри машины для её включения нажимите 'f'";
+				driver_inside ? get_out() : get_in();
+			}
+			break;
+			case 102:
+			{
+				CarRun();
+				panel();
+			}
+			break;
+			}
+		} while (key != Escape);
+	}
+	void panel()
+	{
+		while (driver_inside)
+		{
+			system("CLS");
+			std::cout << "Fuel level: " << fuel_tank.get_fuel_level() << " liters" << std::endl;
+			std::cout << "Engine is " << (engine.isStarted() ? "started" : "stoped") << std::endl;
+			std::cout << "Speed: " << speed << " km/h\n";
+			control();
+			Sleep(100);
+
+		}
+	}
 	void CarInfo()
 	{
 		fuel_tank.info();
+		engine.EngineInfo();
+		std::cout << "Speed now: " << speed << " km/h" << std::endl;
+		std::cout << "Max speed: " << MAX_SPEED << " km/h" << std::endl;
 	}
 };
 
@@ -140,13 +239,15 @@ public:
 void main()
 {
 	setlocale(LC_ALL, "");
-	double fuell;
+	/*double fuell;
 	char isRun;
 	bool CarRun;
 	Tank tank(80);
-	Engine engine(tank);
-	Car car(tank, engine);
-	do
+	Engine engine(10);
+	engine.EngineInfo();*/
+	//Engine engine(tank);
+	//Car car(tank, engine);
+	/*do
 	{
 		std::cout << "На сколько заправляемся?: "; std::cin >> fuell;
 		std::cout << std::endl;
@@ -185,5 +286,9 @@ void main()
 		{
 			std::cout << "Unknown symbol" << std::endl;
 		}
-	} while (true);
+	} while (true);*/
+
+	Car bmw(10, 80, 270);
+	bmw.control();
+
 }

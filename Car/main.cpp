@@ -70,7 +70,6 @@ class Engine
 {
 private:
 	bool isRunning;
-	//Tank& fuel_tank;
 	const double CONSUMPITON;
 	const double DEFAULT_CONSUMPITON_PER_SECOND;
 	double consumpiton_per_second;
@@ -107,7 +106,7 @@ public:
 	void EngineStart()
 	{
 		isRunning = true;
-		task = std::async(std::launch::async, &Engine::Consume, this);
+		task = std::async(std::launch::async, &Engine::Consume, this, 0.0003);
 	}
 	void EngineStop()
 	{
@@ -117,11 +116,12 @@ public:
 	{
 		return isRunning;
 	}
-	void Consume(/*double CONSUME_FUEL = consumpiton_per_second*/)
+	void Consume(double CONSUME_FUEL = 0.0003)
 	{
+
 		while (isRunning)
 		{
-			double fuel_now = consumpiton_per_second;
+			double fuel_now = CONSUME_FUEL;
 			if (fuel_now <= 0)
 			{
 				std::cout << std::endl << "Топлива нет. Мы встали!" << std::endl;
@@ -188,6 +188,10 @@ public:
 	{
 		driver_inside = false;
 	}
+	double RefuelCar(double amount)
+	{
+		return fuel_tank.fill(amount);
+	}
 	void control()
 	{
 		char key = 0;
@@ -198,13 +202,25 @@ public:
 			{
 			case Enter:
 			{
-				std::cout << "Вы внутри машины для её включения нажимите 'f'";
+
 				driver_inside ? get_out() : get_in();
+			}
+			break;
+			case 101:
+			{
+				if (driver_inside)
+				{
+					CarRun();
+					panel();
+				}
 			}
 			break;
 			case 102:
 			{
-				CarRun();
+				double refuel;
+				std::cout << "На сколько заправляемся?\n";
+				std::cin >> refuel;
+				RefuelCar(refuel);
 				panel();
 			}
 			break;
@@ -216,9 +232,19 @@ public:
 		while (driver_inside)
 		{
 			system("CLS");
+			if (fuel_tank.get_fuel_level() == 0)
+			{
+				std::cout << "Уровень топлива равен нулю! Для заправки нажмите 'f'" << std::endl;
+			}
+			if (!engine.isStarted())
+				std::cout << "Вы внутри машины для её включения нажимите 'e'" << std::endl;
 			std::cout << "Fuel level: " << fuel_tank.get_fuel_level() << " liters" << std::endl;
 			std::cout << "Engine is " << (engine.isStarted() ? "started" : "stoped") << std::endl;
 			std::cout << "Speed: " << speed << " km/h\n";
+			if (engine.isStarted())
+			{
+				engine.Consume();
+			}
 			control();
 			Sleep(100);
 

@@ -28,7 +28,7 @@ private:
 	mutable std::mutex console_mutex; //mutable позволяет использовать lock()/unlock() в const-методах
 	//mutal Exlusion "Взаимное исключение". Объект-замок, используется, что бы не лезть в один и тот же участок кода или данные
 	//Нужен, если допустим два потока пишут в одну и туже переменную, из-за этого они(потоки) могут "переписать" друг друга. 
-	//Мьтекс позволяет: Первому потоку "Запереться", остальные ждут пока он закончит свою работу, потом первый поток "Снимает замок" и
+	//Мьютекс позволяет: Первому потоку "Запереться", остальные ждут пока он закончит свою работу, потом первый поток "Снимает замок" и
 	//следующий поток может "войти"
 public:
 	Car(double consumption, int capacity, int max_speed = 250) :
@@ -44,7 +44,7 @@ public:
 		driver_inside(false)
 	{
 		std::cout << "Car: " << this << std::endl;
-		std::cout << "Car is ready! Press 'Enter' to enter her" << std::endl;
+		std::cout << "Car is ready! Press 'Enter' to get it!" << std::endl;
 	}
 	~Car()
 	{
@@ -120,9 +120,9 @@ public:
 			case 'w':case'W':
 				double km;
 				{
-					if (driver_inside && fuel_tank.get_fuel_level() == 0)
+					std::lock_guard<std::mutex> lock(console_mutex);
+					if (driver_inside && fuel_tank.get_fuel_level() > 0 && engine.isStarted())
 					{
-						std::lock_guard<std::mutex> lock(console_mutex);
 						std::cout << "Сколько км проехать вперёд?: "; std::cin >> km;
 						std::cout << "С какой скоростью?: "; std::cin >> speed;
 					}

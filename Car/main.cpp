@@ -125,8 +125,12 @@ private:
 	const int MAX_SPEED;
 	int speed;
 	bool driver_inside;
+	struct
+	{
+		std::thread panale_thread;
+	}threads_container;//Эта струткутра не имеет имени, и реализует только один экземпляр
 public:
-	Car(double consumption, int capacity, int max_speed = 250) :
+	Car(double consumption, int capacity, int max_speed = 250):
 		MAX_SPEED
 		(
 			max_speed < MAX_SPEED_LOWER_LIMIT ? MAX_SPEED_LOWER_LIMIT :
@@ -156,11 +160,16 @@ public:
 	void get_in()
 	{
 		driver_inside = true;
-		panel();
+		//panel();
+		threads_container.panale_thread = std::thread(&Car::panel, this);
 	}
 	void get_out()
 	{
 		driver_inside = false;
+		if (threads_container.panale_thread.joinable())
+			threads_container.panale_thread.join();
+		system("CLS");
+		std::cout << "You are out of the Car" << std::endl;
 	}
 	void control()
 	{
@@ -173,6 +182,13 @@ public:
 				case Enter:
 					driver_inside ? get_out() : get_in();
 					break;
+				case 'F':case 'f':
+					double fuel;
+					std::cout << "Введите объём топлива: "; std::cin >> fuel;
+					fuel_tank.fill(fuel);
+					break;
+				case Escape:
+					get_out();
 			}
 		} while (key != Escape);
 	}

@@ -3,16 +3,22 @@
 #include<thread>
 #include<future>
 #include<conio.h>
-#include<Windows.h>
 #include"Tank.h"
 #include"Engine.h"
 #include <mutex>
+#include <stdexcept>
+#include <algorithm>
+//#define NOMINMAX
+#include<Windows.h>
 
 #define Escape					 27
 #define Enter					 13
 
 #define MAX_SPEED_LOWER_LIMIT		130
 #define MAX_SPEED_HIGHER_LIMIT		410
+
+#define MIN_DELAY					  50
+#define MAX_DELAY					1000
 
 
 class Car
@@ -23,6 +29,8 @@ private:
 	const int MAX_SPEED;
 	int speed;
 	bool driver_inside;
+	double base_acceleration;
+	double base_friction;
 	std::future<void> panel_task;
 	std::atomic<bool> panel_running;
 	mutable std::mutex console_mutex; //mutable позволяет использовать lock()/unlock() в const-методах
@@ -41,7 +49,9 @@ public:
 		engine(consumption),
 		fuel_tank(capacity),
 		speed(0),
-		driver_inside(false)
+		driver_inside(false),
+		base_acceleration(2.5),
+		base_friction(1)
 	{
 		std::cout << "Car: " << this << std::endl;
 		std::cout << "Car is ready! Press 'Enter' to get it!" << std::endl;
@@ -118,18 +128,137 @@ public:
 			}
 			break;
 			case 'w':case'W':
-				double km;
+			{
+				if (engine.isStarted() && fuel_tank.get_fuel_level() > 0 && driver_inside)
 				{
-					std::lock_guard<std::mutex> lock(console_mutex);
-					if (driver_inside && fuel_tank.get_fuel_level() > 0 && engine.isStarted())
 					{
-						std::cout << "Сколько км проехать вперёд?: "; std::cin >> km;
-						std::cout << "С какой скоростью?: "; std::cin >> speed;
+						std::unique_lock<std::mutex> lock(console_mutex);
+
+						speed_up(1000, lock);
 					}
 				}
-				break;
+
+			}
+			break;
+			case 's':case'S':
+				if (engine.isStarted() && driver_inside && fuel_tank.get_fuel_level() > 0)
+				{
+					{
+						std::unique_lock<std::mutex> lock(console_mutex);
+
+						speed_down(1000, lock);
+					}
+				}
 			}
 		} while (key != Escape);
+	}
+	void speed_up(int delay, std::unique_lock<std::mutex>& Ulock)
+	{
+
+
+		double acceleration = base_acceleration * (1 - (double)(speed / MAX_SPEED));
+		double deceleration = base_friction * double(1 - double(speed / MAX_SPEED));
+		if (deceleration < base_friction)
+		{
+			deceleration = base_friction;
+		}
+
+		Ulock.unlock();
+
+		const int min_delay = 50;
+		const int max_delay = 1000;
+		std::this_thread::sleep_for(std::chrono::microseconds(delay));
+
+		double fuel_consumed = acceleration * engine.get_consumption_per_second();
+		fuel_tank.give_fuel(fuel_consumed);
+
+		int delta;
+		if (_kbhit())
+		{
+			char key = _getch();
+			if (key == 'w' || key == 'W')
+			{
+				speed += acceleration;
+				if (speed > MAX_SPEED) speed = MAX_SPEED;
+
+				delta = (std::max)(5, delay / 10);
+				delay -= delta;
+				if (delay < min_delay) delay = min_delay;
+				Ulock.lock();
+				speed_up(delay, Ulock);
+				return;
+			}
+		}
+		else
+		{
+			speed -= deceleration;
+			if (speed < 0) speed = 0;
+
+
+			delta = (std::max)(5, delay / 20);
+			delay -= delta;
+			if (delay < min_delay) delay = min_delay;
+			Ulock.lock();
+			speed_up(delay, Ulock);
+		}
+	}
+	void speed_down(int delay, std::unique_lock<std::mutex>& Ulock)
+	{
+		double deceleration = 9.81 * 0.71;
+		double initialSpeed = speed;
+		const double k = -0.5;
+		const double lambda = 0.3;
+		const double deltaTime = 0.01;
+		double time = 0;
+		if (deceleration < base_friction)
+		{
+			deceleration = base_friction;
+		}
+		Ulock.unlock();
+		const int min_delay = 50;
+		const int max_delay = 1000;
+
+		std::this_thread::sleep_for(std::chrono::microseconds(delay));
+		while (speed > 0)
+		{
+			double acceleration = deceleration * std::exp(-lambda * time);
+			double fuel_consumed = acceleration * engine.get_consumption_per_second();
+			fuel_tank.give_fuel(fuel_consumed);
+			
+			int delta;
+			if (_kbhit())
+			{
+				char key = _getch();
+				if (key == 's' || key == 'S')
+				{
+					speed -= acceleration * deltaTime;
+					if (speed < 0) speed = 0;
+
+					time += deltaTime;
+
+					delta = (std::max)(5, delay / 20);
+					delay -= delta;
+					if (delay < min_delay) delay = min_delay;
+					Ulock.lock();
+					speed_down(delay, Ulock);
+				}
+			}
+			else
+			{
+				
+
+				speed -= deceleration;
+				if (speed < 0) speed = 0;
+
+				time += deltaTime;
+				delta = (std::max)(5, delay / 20);
+				delay -= delta;
+				if (delay < min_delay) delay = min_delay;
+				Ulock.lock();
+				speed_down(delay, Ulock);
+			}
+		}
+
 	}
 	void panel()
 	{

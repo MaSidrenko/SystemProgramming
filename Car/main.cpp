@@ -128,14 +128,16 @@ private:
 	Engine engine;
 	const int MAX_SPEED;
 	int speed;
+	int acceleration;
 	bool driver_inside;
 	struct
 	{
 		std::thread panale_thread;
 		std::thread engine_idle_thread;
+		std::thread free_wheling_thread;
 	}threads_container;//Эта струткутра не имеет имени, и реализует только один экземпляр
 public:
-	Car(double consumption, int capacity, int max_speed = 250) :
+	Car(double consumption, int capacity, int max_speed = 250, int acceleration = 10) :
 		MAX_SPEED
 		(
 			max_speed < MAX_SPEED_LOWER_LIMIT ? MAX_SPEED_LOWER_LIMIT :
@@ -145,7 +147,8 @@ public:
 		engine(consumption),
 		fuel_tank(capacity),
 		speed(0),
-		driver_inside(false)
+		driver_inside(false),
+		acceleration(acceleration)
 	{
 		std::cout << "Car: " << this << std::endl;
 		std::cout << "Car is ready!" << std::endl;
@@ -190,6 +193,36 @@ public:
 		if (threads_container.engine_idle_thread.joinable())
 			threads_container.engine_idle_thread.join();
 	}
+	void accelerate()
+	{
+		if (driver_inside && engine.started())
+		{
+			speed += acceleration;
+			if (!threads_container.free_wheling_thread.joinable())
+				threads_container.free_wheling_thread = std::thread(&Car::free_wheeling, this);
+			if (speed > MAX_SPEED)
+				speed = MAX_SPEED;
+			std::this_thread::sleep_for(1s);
+		}
+	}
+	void slow_donw()
+	{
+		if (driver_inside)
+		{
+			speed -= acceleration;
+			if (speed < 0)
+				speed = 0;
+			std::this_thread::sleep_for(1s);
+		}
+	}
+	void free_wheeling()
+	{
+		while (--speed > 0)
+		{
+			if (speed < 0) speed = 0;
+			std::this_thread::sleep_for(1s);
+		}
+	}
 	void control()
 	{
 		char key = 0;
@@ -216,11 +249,21 @@ public:
 					!engine.started() ? start() : stop();
 				}
 				break;
+			case'W':case'w':
+				if (driver_inside)
+					accelerate();
+				break;
+			case'S':case's':
+				if (driver_inside)
+					slow_donw();
+				break;
 			case Escape:
 				stop();
 				get_out();
 			}
 			if (fuel_tank.get_fuel_level() <= 0)stop();
+			if (speed <= 0 && threads_container.free_wheling_thread.joinable())
+				threads_container.free_wheling_thread.join();
 		} while (key != Escape);
 	}
 	void engine_idle()

@@ -172,7 +172,7 @@ public:
 		double fuel_consumed = acceleration * engine.get_consumption_per_second();
 		fuel_tank.give_fuel(fuel_consumed);
 
-		int delta;
+		//int delta;
 		if (_kbhit())
 		{
 			char key = _getch();
@@ -181,9 +181,9 @@ public:
 				speed += acceleration;
 				if (speed > MAX_SPEED) speed = MAX_SPEED;
 
-				delta = (std::max)(5, delay / 10);
-				delay -= delta;
-				if (delay < min_delay) delay = min_delay;
+				//delta = (std::max)(5, delay / 10);
+				//delay -= delta;
+				//if (delay < min_delay) delay = min_delay;
 				Ulock.lock();
 				speed_up(delay, Ulock);
 				return;
@@ -195,20 +195,19 @@ public:
 			if (speed < 0) speed = 0;
 
 
-			delta = (std::max)(5, delay / 20);
-			delay -= delta;
-			if (delay < min_delay) delay = min_delay;
+			//delta = (std::max)(5, delay / 20);
+			//delay -= delta;
+			//if (delay < min_delay) delay = min_delay;
 			Ulock.lock();
 			speed_up(delay, Ulock);
 		}
 	}
 	void speed_down(int delay, std::unique_lock<std::mutex>& Ulock)
 	{
-		double deceleration = 9.81 * 0.71;
-		double initialSpeed = speed;
-		const double k = -0.5;
-		const double lambda = 0.3;
-		const double deltaTime = 0.01;
+		double deceleration = 9.81 * 0.71; //9.81 ускорение свободного падения, 0.71 коэфициент сопротевления движения(в данном случае мы считаем, что едим только по сухому асфальту)
+		double initialSpeed = speed;	   //Начальная скорость
+		const double lambda = 0.3;		   //коэфициент экспоненциального убывания 1/с
+		const double deltaTime = 0.01;	   //"шаг" времени ,с
 		double time = 0;
 		if (deceleration < base_friction)
 		{
@@ -225,7 +224,7 @@ public:
 			double fuel_consumed = acceleration * engine.get_consumption_per_second();
 			fuel_tank.give_fuel(fuel_consumed);
 			
-			int delta;
+			//int delta;
 			if (_kbhit())
 			{
 				char key = _getch();
@@ -236,24 +235,22 @@ public:
 
 					time += deltaTime;
 
-					delta = (std::max)(5, delay / 20);
-					delay -= delta;
-					if (delay < min_delay) delay = min_delay;
+					//delta = (std::max)(5, delay / 20);
+					//delay -= delta;
+					//if (delay < min_delay) delay = min_delay;
 					Ulock.lock();
 					speed_down(delay, Ulock);
 				}
 			}
 			else
 			{
-				
-
 				speed -= deceleration;
 				if (speed < 0) speed = 0;
 
 				time += deltaTime;
-				delta = (std::max)(5, delay / 20);
-				delay -= delta;
-				if (delay < min_delay) delay = min_delay;
+				//delta = (std::max)(5, delay / 20);
+				//delay -= delta;
+				//if (delay < min_delay) delay = min_delay;
 				Ulock.lock();
 				speed_down(delay, Ulock);
 			}

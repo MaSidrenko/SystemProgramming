@@ -135,7 +135,7 @@ private:
 		std::thread panale_thread;
 		std::thread engine_idle_thread;
 		std::thread free_wheling_thread;
-	}threads_container;//Эта струткутра не имеет имени, и реализует только один экземпляр
+	}threads_container; //Эта струткутра не имеет имени, и реализует только один экземпляр
 public:
 	Car(double consumption, int capacity, int max_speed = 250, int acceleration = 10) :
 		MAX_SPEED

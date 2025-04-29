@@ -1,9 +1,6 @@
 ﻿#include<iostream>
 #include"Car.h"
 
-
-
-
 void main()
 {
 	setlocale(LC_ALL, "");
